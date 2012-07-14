@@ -7,12 +7,7 @@ require_once 'system/core/exceptions.php';
 class Framework {
 	public static $config;
 	public static function init() {
-		spl_autoload_register(__NAMESPACE__ . '\Framework::log');
 		spl_autoload_register(__NAMESPACE__ . '\Framework::autoload');
-	}
-
-	public static function log($class) {
-		Log::debug('Loading: ' . $class);
 	}
 
 	public static function autoload($class) {

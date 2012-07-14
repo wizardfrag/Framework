@@ -10,4 +10,8 @@ class Core {
 	public static function init() {
 		self::$dbconn = self::connect();
 	}
+
+	public static function get() {
+		return self::$dbconn;
+	}
 }
