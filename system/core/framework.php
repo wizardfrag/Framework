@@ -36,11 +36,8 @@ class Framework {
 	}
 
 	public static function process() {
-		try {
-			self::$config = new \Application\Config\Site;
-		} catch (\AutoloadException $e) {
-			self::$config = new \System\Core\Config;
-		}
+		self::$config = new \Application\Config\Site;
+		\Application\Config\Routes::init();
 		Log::init();
 		try {
 			Router::route();
