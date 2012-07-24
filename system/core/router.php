@@ -2,9 +2,9 @@
 namespace System\Core;
 
 class Router {
-	protected static $url, $uri_parts, $controller, 
-		$routes = array(), $default_controller,
-		$controller_404 = FALSE;
+	protected static $url, $uri_parts, $format,
+		$controller, $routes = array('index' => ''),
+		$default_controller, $controller_404 = FALSE;
 
 	const DEFAULT_METHOD = 'index';
 
@@ -20,6 +20,10 @@ class Router {
 
 	public static function set_url($url = '') {
 		self::$url = $url;
+		$path_parts = pathinfo(self::$url);
+		self::$url = $path_parts['dirname'] . '/' . $path_parts['filename'];
+		self::$url = str_replace('//', '/', self::$url);
+		self::$format = (isset($path_parts['extension'])) ? $path_parts['extension'] : 'html';
 		if (substr(self::$url, 0, 1) === '/') {
 			self::$url = substr(self::$url, 1);
 		}
@@ -105,9 +109,18 @@ class Router {
 		$class_name = "Application\\Controllers\\" . self::$controller . "Controller";
 		$controller = new $class_name;
 		$method = self::$method;
+		ob_start();
 		call_user_func_array(array($controller, self::$method), $args);
+		$output = ob_get_clean();
 		if ($controller->should_render() == true) {
+			if (self::$format == 'json') {
+				header("Content-Type: application/json");
+				echo json_encode(array('data' => $controller->get_data(), /* temporary: */ 'html' => $output));
+				exit;
+			}
+			echo "<pre>Data:\n";
 			var_dump($controller->get_data());
+			echo "</pre>";
 		}
 	}
 	public static function show_404() {
