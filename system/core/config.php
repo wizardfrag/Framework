@@ -2,5 +2,7 @@
 
 namespace System\Core;
 
-class Config {
+abstract class Config {
+	public function __construct() {}
+	public function init() {}
 }

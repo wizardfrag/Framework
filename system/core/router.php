@@ -4,7 +4,8 @@ namespace System\Core;
 class Router {
 	protected static $url, $uri_parts, $format,
 		$controller, $routes = array('index' => ''),
-		$default_controller, $controller_404 = FALSE;
+		$default_controller, $controller_404 = false,
+		$rendering_404 = false;
 
 	const DEFAULT_METHOD = 'index';
 
@@ -27,6 +28,10 @@ class Router {
 		if (substr(self::$url, 0, 1) === '/') {
 			self::$url = substr(self::$url, 1);
 		}
+	}
+
+	public static function get_url() {
+		return self::$url;
 	}
 
 	public static function add_route($match, $to) {
@@ -63,7 +68,7 @@ class Router {
 		}
 
 		foreach (self::$routes as $match => $to) {
-			Log::debug('Checking route "' . $match . '" => "' . $to . '" against "' . self::$url . '"');
+			// Log::debug('Checking route "' . $match . '" => "' . $to . '" against "' . self::$url . '"');
 			// Translate CodeIgniter style wildcards to regex
 			$match = str_replace(array(':any', ':num'), array('.+', '[0-9]+'), $match);
 
@@ -71,7 +76,7 @@ class Router {
 			if (preg_match('#^' . $match . '$#', self::$url)) {
 				// We have a regex match
 
-				if (strpos($to, '$') !== FALSE && strpos($match, '(') !== FALSE) {
+				if (strpos($to, '$') !== false && strpos($match, '(') !== false) {
 					// Replace any back-references from the routes.
 					$to = preg_replace('#^' . $match . '$#', $to, self::$url);
 				}
@@ -80,7 +85,7 @@ class Router {
 			}
 		}
 		self::parse_route(self::$url);
-		return FALSE; // We got nothing!
+		return false; // We got nothing!
 	}
 
 	private static function parse_route($uri) {
@@ -109,31 +114,43 @@ class Router {
 		$class_name = "Application\\Controllers\\" . self::$controller . "Controller";
 		$controller = new $class_name;
 		$method = self::$method;
+		$controller->set_view(strtolower(self::$controller) . DIRECTORY_SEPARATOR . $method);
 		ob_start();
 		call_user_func_array(array($controller, self::$method), $args);
-		$output = ob_get_clean();
+		$controller_output = ob_get_clean();
 		if ($controller->should_render() == true) {
 			if (self::$format == 'json') {
 				header("Content-Type: application/json");
-				echo json_encode(array('data' => $controller->get_data(), /* temporary: */ 'html' => $output));
+				echo json_encode($controller->get_data());
 				exit;
+			} elseif (self::$format == 'html') {
+				$viewfile = ($controller->get_view()) ?: 'test';
+				$data = (array)$controller->get_data();
+				$data['controller_output'] = $controller_output;
+				View::render($viewfile, $data);
+			} else {
+				self::show_404();
 			}
-			echo "<pre>Data:\n";
-			var_dump($controller->get_data());
-			echo "</pre>";
+		} else {
+			print $controller_output;
 		}
 	}
 	public static function show_404() {
 		header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-		if (self::$controller_404) {
+		if (self::$controller_404 && !self::$rendering_404) {
+			self::$rendering_404 = true; // Catch an endless 404 loop if the 404
+										 // controller's index method doesn't exist!
 			self::route(self::$controller_404);
 			exit;
 		}
 		echo "<h1>404 Not Found</h1>\n" .
 			 'The page /' . self::$url . ' could not be found.<br/>';
-
-		\System\Core\Log::debug(sprintf('Method not found: %s->%s', self::$controller, self::$method));
 		exit;
+	}
+
+	public static function bad_request() {
+		header($_SERVER['SERVER_PROTOCOL'] . " 400 Bad Request");
+		echo "<h1>400 Bad Request</h1>\n<p>Your browser sent a request that we were unable to process</p>";
 	}
 
 	public static function teapot() {
@@ -143,9 +160,17 @@ class Router {
 	}
 
 	public static function redirect($destination) {
+		if (substr($destination, 0, 4) != 'http' && substr($destination, 0, 3) != 'ftp') {
+			$destination = Framework::$config->site_url . $destination;
+		}
+
 		header($_SERVER['SERVER_PROTOCOL'] . " 302 Found");
 		header("Location: " . $destination);
 		echo "Click <a href=\"{$destination}\">here</a> if you are not forwarded automatically";
 		exit;
+	}
+
+	public static function get_format() {
+		return self::$format;
 	}
 }

@@ -3,9 +3,10 @@
 namespace System\Core;
 
 class Controller {
-	protected $framework, $viewname, $render = true, $data = array();
+	protected $framework, $viewname, $render = true, $data = array(), $jsondata = array(), $session;
 	public function __construct() {
 		Log::debug("Controller initialised");
+		$this->session =& Framework::$session;
 	}
 
 	public function __call($name, $arguments) {
@@ -16,6 +17,11 @@ class Controller {
 			array_unshift($arguments, $name);
 			call_user_func_array(array($this, "_remap"), $arguments);
 		} else {
+			// Debug stuff ?
+			// echo '<pre>';
+			// debug_print_backtrace();
+			// echo '</pre>';
+			// exit;
 			// Nothing to see here, 404
 			throw new \Http404Exception();
 		}
@@ -31,6 +37,16 @@ class Controller {
 	}
 
 	public function get_data() {
+		if (Router::get_format() == 'json' && !empty($this->jsondata))
+			return $this->jsondata;
 		return $this->data;
+	}
+
+	public function get_view() {
+		return $this->viewname;
+	}
+
+	public function set_view($view = '') {
+		$this->viewname = $view;
 	}
 }

@@ -5,7 +5,7 @@ require_once 'system/core/log.php';
 require_once 'system/core/exceptions.php';
 
 class Framework {
-	public static $config;
+	public static $config, $session, $db;
 	public static function init() {
 		spl_autoload_register(__NAMESPACE__ . '\Framework::autoload');
 	}
@@ -32,12 +32,20 @@ class Framework {
 
 	public static function process() {
 		self::$config = new \Application\Config\Site;
+		// TODO: Add some checks of the config/etc.
+		//       to see if we actually want sessions...
+		self::$session = new Session;
+		self::$db = new Db\DbCore;
 		\Application\Config\Routes::init();
+		// See above TODO for the following 2 lines
 		Log::init();
+		Cache::init();
 		try {
 			Router::route();
 		} catch (\Http404Exception $e) {
 			Router::show_404();
 		}
+		// TODO: Check to see if we're still saving cache
+		Cache::save();
  	}
 }
