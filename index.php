@@ -2,6 +2,7 @@
 
 ini_alter('display_errors', 'On');
 define('ENVIRONMENT', 'development');
+define('FCPATH', dirname(__FILE__));
 
 require_once 'system/core/framework.php';
 

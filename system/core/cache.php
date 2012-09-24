@@ -2,27 +2,31 @@
 namespace System\Core;
 
 class Cache {
-	private static $cache;
+	private static $cache, $loaded = false;
 	public static function init() {
 		self::$cache = new FileCache;
+		self::$loaded = true;
 	}
 	public static function load() {
-		self::$cache->load();
+		if (self::$loaded) self::$cache->load();
 	}
 	public static function set($name, $value, $expiry = 300) {
-		self::$cache->set($name, $value, $expiry);
+		if (self::$loaded) self::$cache->set($name, $value, $expiry);
 	}
 	public static function get($name) {
-		return self::$cache->get($name);
+		if (self::$loaded) return self::$cache->get($name);
+		return NULL;
 	}
 	public function check($name) {
-		return self::$cache->check($name);
+		if (self::$loaded) return self::$cache->check($name);
+		return NULL;
 	}
 	public static function remove($name) {
-		self::$cache->remove($name);
+		if (self::$loaded) self::$cache->remove($name);
 	}
 	public static function save() {
-		self::$cache->save();
+		if (self::$loaded) self::$cache->save();
+		else Log::debug("Cache not loaded so not saving");
 	}
 }
 
